@@ -18,6 +18,22 @@ public typealias SystemColor = UIColor
 public typealias SystemView = UIView
 #endif
 
+public enum BlurFilter: String, Sendable {
+    case gaussianBlur
+    case boxBlur
+    case discBlur
+    case median
+    
+    public var filter: String {
+        switch self {
+        case .gaussianBlur: return "CIGaussianBlur"
+        case .boxBlur: return "CIBoxBlur"
+        case .discBlur: return "CIDiscBlur"
+        case .median: return "CIMedian"
+        }
+    }
+}
+
 /// A system view that presents an animated gradient with ``CoreAnimation``
 public class FluidGradientView: SystemView {
     var speed: CGFloat
@@ -29,7 +45,7 @@ public class FluidGradientView: SystemView {
     
     weak var delegate: FluidGradientDelegate?
     
-    init(blobs: [Color] = [],
+    public init(blobs: [Color] = [],
          highlights: [Color] = [],
          speed: CGFloat = 1.0) {
         self.speed = speed
@@ -85,6 +101,59 @@ public class FluidGradientView: SystemView {
                 layer.addSublayer(BlobLayer(color: color))
             }
         }
+    }
+    
+    public func renderToImage(size: CGSize, blurFilter: sending BlurFilter, blurRadius: CGFloat) async -> CGImage? {
+        // Configure the view for rendering
+        self.frame = CGRect(origin: .zero, size: size)
+        
+        #if os(OSX)
+        // Force layout if needed
+        self.layout()
+        #else
+        // Force layout if needed
+        self.layoutIfNeeded()
+        #endif
+        
+        // Create a bitmap context to render into
+        let colorSpace = CGColorSpace(name: CGColorSpace.displayP3)
+        let bitmapInfo = CGBitmapInfo(rawValue: CGImageAlphaInfo.premultipliedLast.rawValue)
+        guard let colorSpace else { return nil }
+        guard let context = CGContext(
+            data: nil,
+            width: Int(size.width),
+            height: Int(size.height),
+            bitsPerComponent: 8,
+            bytesPerRow: 0,
+            space: colorSpace,
+            bitmapInfo: bitmapInfo.rawValue
+        ) else { return nil }
+        
+        // Render the layer tree into the bitmap context
+        self.layer.render(in: context)
+        
+        // Get the CGImage from the context
+        guard let cgImage = context.makeImage() else { return nil }
+        
+        // Apply blur using Core Image
+        let ciContext = CIContext(options: [
+            .useSoftwareRenderer: false,
+            .priorityRequestLow: true
+        ])
+        let ciImage = CIImage(cgImage: cgImage)
+        
+        guard let gaussianBlur = CIFilter(name: blurFilter.filter) else { return cgImage }
+        return await Task.detached {
+            gaussianBlur.setValue(ciImage, forKey: kCIInputImageKey)
+            gaussianBlur.setValue(blurRadius, forKey: kCIInputRadiusKey)
+            
+            guard let outputImage = gaussianBlur.outputImage,
+                  let blurredImage = ciContext.createCGImage(outputImage, from: outputImage.extent) else {
+                return cgImage
+            }
+            
+            return blurredImage
+        }.value
     }
     
     /// Update sublayers and set speed and blur levels

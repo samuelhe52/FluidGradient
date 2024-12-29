@@ -7,6 +7,7 @@
 
 import SwiftUI
 
+// MARK: - FluidGradient
 public struct FluidGradient: View {
     private var blobs: [Color]
     private var highlights: [Color]
@@ -15,6 +16,7 @@ public struct FluidGradient: View {
     
     @State var blurValue: CGFloat = 0.0
     
+    // MARK: - Initializer
     public init(blobs: [Color],
                 highlights: [Color] = [],
                 speed: CGFloat = 1.0,
@@ -25,6 +27,7 @@ public struct FluidGradient: View {
         self.blur = blur
     }
     
+    // MARK: - Body
     public var body: some View {
         Representable(blobs: blobs,
                       highlights: highlights,
@@ -36,6 +39,7 @@ public struct FluidGradient: View {
     }
 }
 
+// MARK: - Platform Compatibility
 #if os(OSX)
 typealias SystemRepresentable = NSViewRepresentable
 #else
@@ -62,6 +66,7 @@ extension FluidGradient {
             }
         }
         
+        // MARK: - Platform Specific Methods
 #if os(OSX)
         func makeNSView(context: Context) -> FluidGradientView {
             makeView(context: context)
@@ -86,6 +91,7 @@ extension FluidGradient {
         }
     }
     
+    // MARK: - Coordinator
     class Coordinator: FluidGradientDelegate {
         var blobs: [Color]
         var highlights: [Color]
@@ -94,6 +100,7 @@ extension FluidGradient {
         
         var view: FluidGradientView
         
+        // MARK: - Initializer
         init(blobs: [Color],
              highlights: [Color],
              speed: CGFloat,
@@ -108,6 +115,7 @@ extension FluidGradient {
             self.view.delegate = self
         }
         
+        // MARK: - Methods
         /// Create blobs and highlights
         func create(blobs: [Color], highlights: [Color]) {
             guard blobs != self.blobs || highlights != self.highlights else { return }
@@ -126,6 +134,7 @@ extension FluidGradient {
             view.update(speed: speed)
         }
         
+        /// Update blur value
         func updateBlur(_ value: CGFloat) {
             blurValue.wrappedValue = value
         }
