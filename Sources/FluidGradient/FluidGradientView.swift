@@ -87,21 +87,19 @@ public class FluidGradientView: SystemView {
         }
     }
     
-    /// Captures and renders the view into a raw `CGImage` with the specified size.
+    /// Captures and renders the view into a raw `UIImage` with the specified size.
     ///
     /// - Parameters:
     ///   - size: The desired size of the rendered image.
     ///
-    /// - Returns: A `CGImage` representing the rendered view, or `nil` if rendering fails.
+    /// - Returns: A `UIImage` representing the rendered view, or `nil` if rendering fails.
     ///
     /// This method configures the view's frame, forces layout updates, and renders the view's layer tree into a bitmap context.
-    /// The resulting image is returned as a `CGImage`. If the context creation or image generation fails, the method returns `nil`.
+    /// The resulting image is returned as a `UIImage`. If the context creation or image generation fails, the method returns `nil`.
     ///
     /// **Note that this method returns a raw image which is not blurred.**
-    public func renderToImage(size: CGSize) -> CGImage? {
-//        guard let view = self.snapshotView(afterScreenUpdates: true) else { return nil }
-        let view = self
-        view.frame = CGRect(origin: .zero, size: size)
+    public func renderToImage(size: CGSize) -> UIImage? {
+        self.bounds.size = size
         
         #if os(OSX)
         // Force layout if needed
@@ -126,10 +124,11 @@ public class FluidGradientView: SystemView {
         ) else { return nil }
         
         // Render the layer tree into the bitmap context
-        view.layer.render(in: context)
+        self.layer.render(in: context)
         
         // Get the CGImage from the context
-        return context.makeImage()
+        guard let cgImage = context.makeImage() else { return nil }
+        return UIImage(cgImage: cgImage)
     }
     
     /// Update sublayers and set speed and blur levels
